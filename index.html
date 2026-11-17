@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vòng quay may mắn - Ngày hội STEM 20/11</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:radial-gradient(circle at 30% 40%,#3b1a6e,#14082b);color:#fff;font-family:"Segoe UI",system-ui,sans-serif;overflow:hidden}
+  .app{display:flex;height:100vh}
+  .stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;padding:8px}
+  h1{margin:0 0 4px;font-size:clamp(18px,2.6vw,38px);text-align:center;color:#ffd23f;text-shadow:0 2px 8px #0008}
+  .wrap{position:relative;flex:1;width:100%;display:flex;align-items:center;justify-content:center;min-height:0}
+  canvas{max-width:100%;max-height:100%;aspect-ratio:1;cursor:pointer;filter:drop-shadow(0 8px 24px #000a)}
+  .pointer{position:absolute;top:0;left:50%;transform:translateX(-50%);width:0;height:0;border-left:clamp(14px,2vw,30px) solid transparent;border-right:clamp(14px,2vw,30px) solid transparent;border-top:clamp(28px,4vw,56px) solid #fff;filter:drop-shadow(0 3px 4px #000a);z-index:2;pointer-events:none}
+  .side{width:min(340px,32vw);background:#0006;padding:14px;display:flex;flex-direction:column;gap:10px;overflow:auto}
+  .side h2{margin:0;font-size:18px;color:#ffd23f}
+  .row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:#fff1;font-size:15px}
+  .row i{width:14px;height:14px;border-radius:50%;flex:none}
+  .row input{margin-left:auto;width:58px;font:inherit;font-weight:700;font-size:16px;text-align:center;border-radius:6px;border:1px solid #fff4;background:#0005;color:#fff;padding:2px}.row b{margin-left:auto;font-size:18px}
+  .row.out{opacity:.35;text-decoration:line-through}
+  .pct{font-size:12px;opacity:.7;width:42px;text-align:right}
+  button,label.btn{font:inherit;border:0;border-radius:10px;padding:10px 14px;cursor:pointer;background:#ffd23f;color:#2a1050;font-weight:700;text-align:center}
+  button.sec,label.btn{background:#fff2;color:#fff;font-weight:500;font-size:14px}
+  button:disabled{opacity:.5;cursor:default}
+  #spin{font-size:clamp(18px,2.4vw,32px);padding:12px 40px;margin-top:6px}
+  .modal{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:10}
+  .modal.on{display:flex}
+  .card{background:linear-gradient(#fff,#ffeeb0);color:#2a1050;border-radius:24px;padding:40px 56px;text-align:center;max-width:90vw;animation:pop .5s}
+  .card h3{margin:0;font-size:clamp(20px,3vw,36px)}
+  .card .qtext{font-size:clamp(22px,3.6vw,52px);font-weight:800;margin:14px 0;max-width:1000px}.card .ans{display:none;font-size:clamp(18px,2.4vw,32px);color:#1b5e20;margin:10px 0}.card .ans.on{display:block}.card #reveal{margin-bottom:10px;font-size:14px}.card .prize{font-size:clamp(18px,2.4vw,30px);font-weight:700;margin:8px 0 18px;color:#c2185b}
+  .card p{margin:0 0 20px;font-size:clamp(16px,2vw,26px)}
+  .card .btns{display:flex;gap:12px;justify-content:center}
+  .card button.sec{background:#2a105022;color:#2a1050}
+  @keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+  @media(max-width:800px){.app{flex-direction:column}.side{width:100%;max-height:36vh}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="stage">
+    <h1>🎁 VÒNG QUAY MAY MẮN – NGÀY HỘI STEM 20/11 🎁</h1>
+    <div class="wrap"><div class="pointer"></div><canvas id="c"></canvas></div>
+    <button id="spin">QUAY!</button>
+  </div>
+  <div class="side">
+    <h2>Quà còn lại: <span id="total"></span></h2>
+    <div id="list"></div>
+    <label class="btn">🎵 Chọn nhạc riêng (mp3)<input id="file" type="file" accept="audio/*" hidden></label>
+    <button class="sec" id="mute">🔊 Nhạc: Bật</button>
+    <button class="sec" id="full">⛶ Toàn màn hình</button>
+    <button class="sec" id="undo">↩ Hoàn tác</button>
+    <button class="sec" id="reset">↺ Đặt lại 50 câu & quà</button>
+    <small style="opacity:.6">Xác suất mỗi ô = số quà còn lại ÷ tổng quà còn lại. Số trong ô vuông = số quà đang có, sửa tay được (không vượt số câu còn lại). Trả lời đúng mới mất câu hỏi + quà; chưa đúng thì vẫn giữ nguyên. Mỗi quà kèm 1 kẹo mút.</small>
+  </div>
+</div>
+<div class="modal" id="modal"><div class="card">
+  <h3 id="qtag"></h3><div class="qtext" id="qtext"></div><div class="ans" id="ans"></div><button class="sec" id="reveal">👁 MC xem đáp án</button><div class="prize" id="prize"></div>
+  <div class="btns"><button id="ok">✔ Trả lời đúng – Nhận quà</button><button class="sec" id="skip">✘ Chưa đúng – quay tiếp</button></div>
+</div></div>
+
+<script>
+// Danh sách 50 câu hỏi (n = số câu, q = câu hỏi, a = đáp án, h = gợi ý cho MC)
+const QS=[{"n":1,"q":"Ốc sên leo cột cao 10m, ngày leo 3m, đêm tụt 2m. Hỏi mấy ngày leo tới đỉnh?","a":"8 ngày","h":"Hết ngày 7 đạt 7m, ngày 8 leo thêm 3m là chạm đỉnh luôn."},{"n":2,"q":"5 cái máy làm 5 cái bánh mất 5 phút. Hỏi 100 máy làm 100 bánh mất mấy phút?","a":"5 phút","h":"Các máy chạy cùng một lúc."},{"n":3,"q":"Số tiếp theo của dãy số 1, 1, 2, 3, 5, 8 là số mấy?","a":"13","h":"Số sau bằng tổng 2 số trước cộng lại (5 + 8)."},{"n":4,"q":"Khi trời giông bão, ta thấy tia chớp trước hay nghe tiếng sấm trước?","a":"Thấy tia chớp trước","h":"Vận tốc ánh sáng nhanh hơn âm thanh."},{"n":5,"q":"Con chuột máy tính đầu tiên trên thế giới được làm bằng chất liệu gì?","a":"Bằng gỗ","h":"Không phải nhựa hay kim loại."},{"n":6,"q":"Lúc 3 giờ 15 phút, kim giờ và kim phút có nằm trùng khít lên nhau không?","a":"Không (kim giờ nhích qua số 3 một chút)","h":"Kim giờ luôn nhích chậm theo kim phút."},{"n":7,"q":"Hai người cha và hai người con đi câu cá, mỗi người câu 1 con. Hỏi có mấy con cá?","a":"3 con cá","h":"Chỉ có 3 người: Ông nội, bố và con trai."},{"n":8,"q":"Thiết bị nào trên máy tính có tên giống con vật nhỏ rất sợ mèo?","a":"Con chuột","h":"Dùng tay điều khiển mũi tên trên màn hình."},{"n":9,"q":"Biểu tượng cột sóng rẻ quạt giúp vào mạng không dây gọi là gì?","a":"Wi-Fi","h":"Phát âm 2 tiếng, bắt đầu bằng chữ W."},{"n":10,"q":"Ô vuông nhiều chấm đen trắng dùng điện thoại quét để mở link gọi là mã gì?","a":"Mã QR (QR Code)","h":"Thường dùng khi quét thanh toán hoặc mở bài học."},{"n":11,"q":"Trí tuệ nhân tạo viết tắt bằng hai chữ cái tiếng Anh nào?","a":"AI","h":"Đọc giống tiếng hỏi \"Ai đấy?\"."},{"n":12,"q":"Trong chữ STEM, chữ M là viết tắt của môn học nào?","a":"Môn Toán","h":"Môn học về các con số và phép tính."},{"n":13,"q":"Bộ phận nào được ví như \"bộ não\" xử lý thông tin của máy tính?","a":"CPU","h":"Viết tắt gồm 3 chữ cái tiếng Anh."},{"n":14,"q":"Lưu trữ tài liệu trên mạng (như Google Drive) gọi là công nghệ gì?","a":"Điện toán đám mây (Cloud)","h":"Tên gắn với hình ảnh đám mây."},{"n":15,"q":"6 chữ cái đầu tiên ở hàng phím chữ trên cùng bên trái bàn phím là gì?","a":"QWERTY","h":"Tên gọi chuẩn bàn phím thông dụng."},{"n":16,"q":"Nhận được tin nhắn lạ báo trúng thưởng đòi nhập mật khẩu, ta nên làm gì?","a":"Không bấm vào link, không nhập mật khẩu","h":"Đề phòng lừa đảo trên mạng."},{"n":17,"q":"Để bảo vệ mắt khi dùng máy tính bảng, ta nên ngồi sát hay giữ khoảng cách?","a":"Ngồi giữ khoảng cách","h":"Tránh bị mỏi mắt, cận thị."},{"n":18,"q":"Loài chim nào nhỏ nhất thế giới, bé bằng con ong và biết bay lùi?","a":"Chim ruồi","h":"Tên có chứa một loại côn trùng."},{"n":19,"q":"Cầu vồng sau mưa có tất cả bao nhiêu màu?","a":"7 màu","h":"Đỏ, cam, vàng, lục, lam, chàm, tím."},{"n":20,"q":"Con vật nào dưới biển có 8 cái vòi và biết phun mực đen?","a":"Con bạch tuộc","h":"Loài vật có 8 xúc tu."},{"n":21,"q":"Ban ngày, cây xanh nhả ra khí gì giúp con người hít thở?","a":"Khí Ô-xy (Oxygen)","h":"Khí duy trì sự sống."},{"n":22,"q":"Loài động vật nào lớn nhất trên Trái Đất hiện nay?","a":"Cá voi xanh","h":"Sống ở đại dương, nặng bằng hàng chục con voi."},{"n":23,"q":"Vào mùa đông lạnh giá, loài gấu thường làm gì suốt nhiều tháng?","a":"Ngủ đông","h":"Nằm ngủ xuyên mùa lạnh."},{"n":24,"q":"Hành tinh nào trong Hệ Mặt Trời được gọi là \"Hành tinh Đỏ\"?","a":"Sao Hỏa","h":"Tên hành tinh gắn với ngọn lửa."},{"n":25,"q":"Thả viên nước đá vào cốc nước lọc thì viên đá nổi hay chìm?","a":"Nổi lên trên","h":"Nước đá nhẹ hơn nước lỏng."},{"n":26,"q":"Ở điều kiện bình thường, nước sôi ở bao nhiêu độ C?","a":"100 độ C","h":"Mốc nhiệt độ sôi tiêu chuẩn."},{"n":27,"q":"Các tấm pin trên mái nhà tạo ra điện từ nguồn năng lượng nào?","a":"Năng lượng mặt trời","h":"Hấp thụ ánh sáng ban ngày."},{"n":28,"q":"Trên đĩa có 3 quả táo, con lấy đi 2 quả. Hỏi trên tay con có mấy quả?","a":"2 quả táo","h":"Đề hỏi \"trên tay con\" có mấy quả."},{"n":29,"q":"1 con vịt có 2 cái cánh. Hỏi 3 con vịt có mấy cái cánh?","a":"6 cái cánh","h":"Lấy 2 nhân 3."},{"n":30,"q":"Số tiếp theo của dãy số 2, 4, 6, 8 là số mấy?","a":"Số 10","h":"Đếm cách đều 2 đơn vị."},{"n":31,"q":"Đang chạy thi, con vượt qua bạn đứng thứ 2. Hỏi con đứng thứ mấy?","a":"Thứ 2","h":"Con thế chỗ của bạn vừa bị vượt."},{"n":32,"q":"Hình gì tròn xoe như quả bóng và không có góc nào?","a":"Hình tròn","h":"Giống hình chiếc bánh xe."},{"n":33,"q":"Trên cành có 5 con chim, nghe tiếng vỗ tay chúng bay đi hết. Hỏi còn mấy con?","a":"0 con","h":"Chim giật mình bay hết rồi."},{"n":34,"q":"Nhà có 4 anh trai, mỗi anh trai đều có 1 em gái. Hỏi nhà có mấy người con?","a":"5 người con","h":"4 anh trai cùng chung 1 em gái út."},{"n":35,"q":"Dùng 3 que diêm nguyên vẹn xếp thành số 4 bằng cách nào?","a":"Xếp thành số La Mã IV","h":"Chữ số La Mã."},{"n":36,"q":"Hai bộ phận nào trên khuôn mặt vẫn tiếp tục to ra nhẹ từ nhỏ đến già?","a":"Mũi và tai","h":"Cấu tạo từ mô sụn."},{"n":37,"q":"Con vật nào gáy \"ò ó o\" báo thức mọi người mỗi buổi sáng?","a":"Con gà trống","h":"Sống trong sân vườn, có mào đỏ."},{"n":38,"q":"Con vật nào trong 12 con giáp tượng trưng cho sự chăm chỉ cày ruộng?","a":"Con trâu (Sửu)","h":"\"Con trâu là đầu cơ nghiệp\"."},{"n":39,"q":"Cái gì càng rửa thì lại càng bẩn?","a":"Nước","h":"Dùng để làm sạch mọi thứ."},{"n":40,"q":"Con gì đập thì sống, không đập thì chết?","a":"Con tim (trái tim)","h":"Nằm ở lồng ngực bên trái."},{"n":41,"q":"Cái gì của riêng em nhưng người khác lại gọi nhiều hơn em?","a":"Tên của em","h":"Dùng để mọi người gọi nhau."},{"n":42,"q":"Cái gì có cổ, có tay, có thân nhưng không có đầu và chân?","a":"Cái áo","h":"Trang phục mặc hàng ngày."},{"n":43,"q":"Bệnh gì mà bác sĩ giỏi đến mấy cũng phải \"bó tay\"?","a":"Bệnh gãy tay","h":"Phải dùng băng bột cố định tay."},{"n":44,"q":"Cái gì luôn đi lên mà không bao giờ đi xuống?","a":"Tuổi tác","h":"Mỗi năm lại tăng thêm 1."},{"n":45,"q":"Vào phòng tối có sẵn que diêm, cây nến và đèn dầu. Bạn thắp gì đầu tiên?","a":"Thắp que diêm","h":"Phải bật diêm mới có lửa."},{"n":46,"q":"Tháng nào trong năm có 28 ngày?","a":"Tháng nào cũng có 28 ngày","h":"Cả 12 tháng đều có ít nhất 28 ngày."},{"n":47,"q":"Cái gì đi vòng quanh thế giới nhưng vẫn nằm yên ở một góc?","a":"Con tem thư","h":"Dán ở góc phong bì thư."},{"n":48,"q":"Một người đi dưới mưa không đội mũ, không cầm ô nhưng tóc không ướt. Tại sao?","a":"Vì người đó bị hói","h":"Trên đầu không có sợi tóc nào."},{"n":49,"q":"Ngày Nhà giáo Việt Nam là ngày nào, tháng nào trong năm?","a":"Ngày 20 tháng 11","h":"Ngày lễ tri ân thầy cô giáo."},{"n":50,"q":"Điền từ còn thiếu: \"Muốn con hay chữ thì yêu lấy...\"?","a":"Thầy","h":"Người dạy dỗ các em ở trường."}];
+// Mỗi ô quà gắn với các câu từ..đến. Số quà còn lại = số câu chưa được trả lời đúng.
+const PRIZES = [
+  {name:"Cốc sứ cao cấp", from:1,  to:1,  color:"#e53935"},
+  {name:"Bình nước",      from:2,  to:3,  color:"#fb8c00"},
+  {name:"Túi nhỏ đỏ",     from:4,  to:6,  color:"#d81b60"},
+  {name:"Túi nhỏ xanh",   from:7,  to:7,  color:"#1e88e5"},
+  {name:"Bút gel dẻo",    from:8,  to:27, color:"#43a047"},
+  {name:"Sổ tay nhỏ",     from:28, to:38, color:"#8e24aa"},
+  {name:"Thước kẻ",       from:39, to:48, color:"#00acc1"},
+  {name:"Móc khóa",       from:49, to:50, color:"#fdd835"},
+];
+const KEY="vongquay_v3";
+const defAvail=()=>PRIZES.map(p=>p.to-p.from+1);
+let done=new Set(),avail=defAvail(),hist=[];
+try{const s=JSON.parse(localStorage.getItem(KEY));if(s){done=new Set(s.done||[]);if(Array.isArray(s.avail)&&s.avail.length===PRIZES.length)avail=s.avail;hist=s.hist||[]}}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({done:[...done],avail,hist}))}catch(e){}};
+const left=i=>QS.filter(q=>q.n>=PRIZES[i].from&&q.n<=PRIZES[i].to&&!done.has(q.n));
+// số quà có thể trúng = số quà đang có (chỉnh tay được), không vượt quá số câu hỏi còn lại
+let stock=[];const calc=()=>{stock=PRIZES.map((p,i)=>Math.min(Math.max(avail[i]|0,0),left(i).length))};calc();
+
+const cv=document.getElementById("c"),ctx=cv.getContext("2d");
+const N=PRIZES.length,SL=2*Math.PI/N;
+let rot=0,spinning=false,pending=-1;
+
+function size(){
+  const w=cv.parentElement.getBoundingClientRect();
+  const s=Math.floor(Math.min(w.width,w.height)),d=devicePixelRatio||1;
+  cv.style.width=cv.style.height=s+"px";cv.width=cv.height=s*d;draw();
+}
+function draw(){
+  const W=cv.width,R=W/2-W*0.015;
+  ctx.clearRect(0,0,W,W);ctx.save();ctx.translate(W/2,W/2);
+  ctx.beginPath();ctx.arc(0,0,R+W*0.012,0,7);ctx.fillStyle="#ffd23f";ctx.fill();
+  ctx.rotate(rot);
+  PRIZES.forEach((p,i)=>{
+    const out=stock[i]<=0;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,R,i*SL,(i+1)*SL);ctx.closePath();
+    ctx.fillStyle=out?"#555":p.color;ctx.fill();ctx.strokeStyle="#fff";ctx.lineWidth=W*0.004;ctx.stroke();
+    ctx.save();ctx.rotate((i+.5)*SL);ctx.textAlign="right";ctx.textBaseline="middle";
+    ctx.fillStyle=(p.color==="#fdd835"&&!out)?"#333":"#fff";
+    ctx.font=`bold ${W*0.045}px "Segoe UI",sans-serif`;
+    ctx.fillText(p.name,R*0.93,0);ctx.restore();
+  });
+  ctx.beginPath();ctx.arc(0,0,W*0.055,0,7);ctx.fillStyle="#fff";ctx.fill();
+  ctx.lineWidth=W*0.008;ctx.strokeStyle="#ffd23f";ctx.stroke();
+  ctx.restore();
+}
+
+function renderList(){
+  const tot=stock.reduce((a,b)=>a+b,0);
+  document.getElementById("total").textContent=tot;
+  document.getElementById("list").innerHTML=PRIZES.map((p,i)=>
+    '<div class="row '+(stock[i]<=0?'out':'')+'"><i style="background:'+p.color+'"></i>'+p.name+
+    '<span class="pct">'+(tot?Math.round(stock[i]/tot*100):0)+'%</span>'+
+    '<input type="number" min="0" max="'+left(i).length+'" value="'+avail[i]+'" data-i="'+i+'" title="Số quà đang có (còn '+left(i).length+' câu hỏi)"></div>').join("");
+  const u=document.getElementById("undo");u.disabled=spinning||!hist.length;
+  u.textContent=hist.length?"↩ Hoàn tác câu "+hist[hist.length-1][0]:"↩ Hoàn tác";
+  document.getElementById("spin").disabled=spinning||tot<=0;
+}
+document.getElementById("list").onchange=e=>{
+  const i=+e.target.dataset.i;if(isNaN(i))return;
+  avail[i]=Math.max(0,Math.min(left(i).length,parseInt(e.target.value)||0));save();calc();draw();renderList();
+};
+function undo(){
+  const h=hist.pop();if(!h||spinning)return;
+  done.delete(h[0]);avail[h[1]]++;save();calc();draw();renderList();
+}
+
+// ---------- Âm thanh (tự tạo, không dính bản quyền) ----------
+let ac,musicTimer=null,muted=false,custom=null;
+const audio=()=>ac||(ac=new (window.AudioContext||window.webkitAudioContext)());
+function beep(f,t,d,type="square",v=.08){
+  const a=audio(),o=a.createOscillator(),g=a.createGain();
+  o.type=type;o.frequency.value=f;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);
+  o.connect(g).connect(a.destination);o.start(t);o.stop(t+d);
+}
+function startMusic(){
+  if(muted)return;
+  if(custom){custom.currentTime=0;custom.play();return}
+  const a=audio(),sc=[523,587,659,784,880,1047,880,784,659,587];let k=0;
+  musicTimer=setInterval(()=>{ // nhạc dồn dập kiểu xổ số
+    const t=a.currentTime;
+    beep(sc[k%sc.length]*(k%20<10?1:1.5),t,.12,"square",.06);
+    if(k%2==0)beep(130+(k%8<4?0:30),t,.16,"triangle",.18);
+    if(k%4==2)beep(2000,t,.03,"square",.03);
+    k++;
+  },125);
+}
+function stopMusic(){clearInterval(musicTimer);if(custom)custom.pause()}
+function tick(){if(!muted)beep(1200,audio().currentTime,.03,"square",.05)}
+function chime(){if(muted)return;const t=audio().currentTime;[1047,1319].forEach((f,i)=>beep(f,t+i*.12,.35,"triangle",.12))}
+function applause(){
+  if(muted)return;const a=audio(),n=a.sampleRate*3,b=a.createBuffer(1,n,a.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<n;i++){const env=Math.min(1,i/(a.sampleRate*.25))*Math.max(0,1-i/n);d[i]=(Math.random()*2-1)*(Math.random()<.03?1:.12)*env}
+  const o=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain();f.type="bandpass";f.frequency.value=2500;g.gain.value=1.6;
+  o.buffer=b;o.connect(f).connect(g).connect(a.destination);o.start();
+}
+function sad(){ // kèn buồn toe-toe-toe-tooo
+  if(muted)return;const t=audio().currentTime;
+  [[392,0,.3],[370,.32,.3],[349,.64,.3],[311,.96,.9]].forEach(([f,o,d])=>beep(f,t+o,d,"sawtooth",.09));
+}
+function fanfare(){
+  if(muted)return;const t=audio().currentTime;
+  [523,659,784,1047,784,1047,1319].forEach((f,i)=>beep(f,t+i*.14,.3,"square",.09));
+}
+
+// ---------- Quay ----------
+function pick(){
+  const tot=stock.reduce((a,b)=>a+b,0);let r=Math.random()*tot;
+  for(let i=0;i<N;i++){r-=stock[i];if(r<0)return i}
+  return stock.findIndex(x=>x>0);
+}
+function spin(){
+  if(spinning||!stock.some(x=>x>0))return;
+  audio().resume&&audio().resume();
+  spinning=true;renderList();
+  const w=pick(),jit=(Math.random()-.5)*SL*.8;
+  let tgt=-Math.PI/2-(w+.5)*SL-jit;
+  const delta=(((tgt-rot)%(2*Math.PI))+2*Math.PI)%(2*Math.PI)+2*Math.PI*(7+Math.floor(Math.random()*3));
+  const start=rot,dur=8000,t0=performance.now();let last=-1;
+  startMusic();
+  (function f(now){
+    const p=Math.min((now-t0)/dur,1),e=1-Math.pow(1-p,4);
+    rot=start+delta*e;draw();
+    const idx=Math.floor((((-Math.PI/2-rot)%(2*Math.PI))+2*Math.PI)%(2*Math.PI)/SL);
+    if(idx!==last){last=idx;tick()}
+    if(p<1)return requestAnimationFrame(f);
+    rot%=2*Math.PI;spinning=false;stopMusic();chime();show(w);
+  })(t0);
+}
+let cur=null;
+function show(w){
+  const pool=left(w);cur=pool[Math.floor(Math.random()*pool.length)];pending=w;
+  document.getElementById("qtag").textContent="Câu "+cur.n+" – quà: "+PRIZES[w].name;
+  document.getElementById("qtext").textContent=cur.q;
+  const an=document.getElementById("ans");an.classList.remove("on");
+  an.innerHTML="Đáp án: <b>"+cur.a+"</b><br><small>"+cur.h+"</small>";
+  document.getElementById("prize").textContent="🎁 "+PRIZES[w].name+" + 1 kẹo mút";
+  document.getElementById("modal").classList.add("on");
+}
+function close(take){
+  if(cur){
+    if(take){done.add(cur.n);avail[pending]=Math.max(0,avail[pending]-1);hist.push([cur.n,pending]);save();calc();applause();fanfare()}
+    else sad();
+  }
+  cur=null;pending=-1;document.getElementById("modal").classList.remove("on");draw();renderList();
+}
+document.getElementById("reveal").onclick=()=>document.getElementById("ans").classList.add("on");
+document.getElementById("spin").onclick=spin;document.getElementById("undo").onclick=undo;
+cv.onclick=spin;
+document.getElementById("ok").onclick=()=>close(true);
+document.getElementById("skip").onclick=()=>close(false);
+document.getElementById("mute").onclick=e=>{muted=!muted;e.target.textContent=muted?"🔇 Nhạc: Tắt":"🔊 Nhạc: Bật"};
+document.getElementById("full").onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
+document.getElementById("reset").onclick=()=>{if(confirm("Đặt lại: tất cả 50 câu hỏi và quà quay lại như ban đầu?")){done.clear();avail=defAvail();hist=[];save();calc();draw();renderList()}};
+document.getElementById("file").onchange=e=>{const f=e.target.files[0];if(f){custom=new Audio(URL.createObjectURL(f));custom.loop=true}};
+addEventListener("resize",size);
+size();renderList();
+</script>
+</body>
+</html>
